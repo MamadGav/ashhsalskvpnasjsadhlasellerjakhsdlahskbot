@@ -1,11 +1,23 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 import os
 
-# ساخت پوشه data اگر وجود نداشت
-os.makedirs("data", exist_ok=True)
+# دریافت URL دیتابیس از متغیر محیطی (برای Railway)
+# اگر متغیر نباشد، از SQLite به صورت local استفاده می‌شود
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-DB_URL = "sqlite+aiosqlite:///data/bot.db"
-engine = create_async_engine(DB_URL, echo=False)
+if DATABASE_URL:
+    # PostgreSQL ( Railway یا هاست ابری)
+    # Railway ممکنه postgres:// بده که باید postgresql+psycopg:// باشه
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+else:
+    # SQLite (برای توسعه محلی)
+    os.makedirs("data", exist_ok=True)
+    DATABASE_URL = "sqlite+aiosqlite:///data/bot.db"
+
+engine = create_async_engine(DATABASE_URL, echo=False)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
