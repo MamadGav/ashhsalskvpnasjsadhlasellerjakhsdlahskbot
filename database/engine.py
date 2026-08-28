@@ -6,12 +6,12 @@ import os
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 if DATABASE_URL:
-    # PostgreSQL ( Railway یا هاست ابری)
-    # Railway ممکنه postgres:// بده که باید postgresql+psycopg:// باشه
+    # PostgreSQL (Railway یا هاست ابری)
+    # Railway ممکنه postgres:// بده که باید postgresql+asyncpg:// باشه
     if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
     elif DATABASE_URL.startswith("postgresql://"):
-        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 else:
     # SQLite (برای توسعه محلی)
     os.makedirs("data", exist_ok=True)
