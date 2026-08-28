@@ -6,7 +6,7 @@ from database.engine import async_session
 from database.models import User, ReferralLog
 from keyboards.inline import back_to_menu_kb
 from locales.fa import TEXTS
-from config import REFERRAL_BONUS
+from config import get_referral_bonus
 
 router = Router()
 
@@ -32,10 +32,11 @@ async def cb_referral(callback: CallbackQuery):
 
     bot_username = (await callback.bot.get_me()).username
     referral_link = f"https://t.me/{bot_username}?start=ref_{callback.from_user.id}"
+    bonus = await get_referral_bonus()
 
     await callback.message.edit_text(
         TEXTS["referral_title"].format(
-            bonus=f"{REFERRAL_BONUS:,}",
+            bonus=f"{bonus:,}",
             link=referral_link,
             count=referral_count,
             total_bonus=f"{total_bonus:,.0f}",

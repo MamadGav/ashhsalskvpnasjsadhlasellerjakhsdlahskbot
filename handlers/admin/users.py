@@ -13,7 +13,7 @@ from keyboards.inline import (
 )
 from locales.fa import TEXTS
 from states.states import AdminChargeWallet
-from config import get_admin_ids
+from config import get_admin_ids, is_admin
 
 router = Router()
 

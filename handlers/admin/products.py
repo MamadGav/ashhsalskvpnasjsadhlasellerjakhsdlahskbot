@@ -8,7 +8,7 @@ from database.models import Product
 from keyboards.inline import admin_products_kb, admin_menu_kb, back_to_admin_kb, admin_product_edit_kb
 from locales.fa import TEXTS
 from states.states import AdminAddProduct, AdminEditProduct
-from config import get_admin_ids
+from config import get_admin_ids, is_admin
 
 router = Router()
 
@@ -205,7 +205,7 @@ async def cb_edit_prod_desc(callback: CallbackQuery, state: FSMContext):
 
 @router.message(AdminEditProduct.value)
 async def process_edit_product(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
+    if not await is_admin(message.from_user.id):
         return
 
     data = await state.get_data()
@@ -263,7 +263,7 @@ async def cb_add_product(callback: CallbackQuery, state: FSMContext):
 
 @router.message(AdminAddProduct.name)
 async def process_product_name(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
+    if not await is_admin(message.from_user.id):
         return
     await state.update_data(name=message.text.strip())
     await message.answer("📝 توضیحات پلن را وارد کنید:")
@@ -272,7 +272,7 @@ async def process_product_name(message: Message, state: FSMContext):
 
 @router.message(AdminAddProduct.description)
 async def process_product_desc(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
+    if not await is_admin(message.from_user.id):
         return
     await state.update_data(description=message.text.strip())
     await message.answer("⏰ مدت پلن به روز را وارد کنید (مثال: 30):")
@@ -281,7 +281,7 @@ async def process_product_desc(message: Message, state: FSMContext):
 
 @router.message(AdminAddProduct.duration)
 async def process_product_duration(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
+    if not await is_admin(message.from_user.id):
         return
     try:
         duration = int(message.text.strip())
@@ -295,7 +295,7 @@ async def process_product_duration(message: Message, state: FSMContext):
 
 @router.message(AdminAddProduct.price)
 async def process_product_price(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
+    if not await is_admin(message.from_user.id):
         return
     try:
         price = int(message.text.replace(",", "").strip())

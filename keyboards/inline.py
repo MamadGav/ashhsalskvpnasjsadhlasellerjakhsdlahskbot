@@ -260,6 +260,7 @@ def admin_remove_admin_kb(admin_ids: list) -> InlineKeyboardMarkup:
 
 def admin_settings_kb(settings: dict) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
+    # قیمت‌گذاری
     kb.button(text=f"💰 قیمت هر گیگ: {settings.get('price_per_gb', '?')} تومان", callback_data="noop")
     kb.button(text=f"7 روز: -{settings.get('dur_7_discount', '?')} تومان", callback_data="noop")
     kb.button(text=f"10 روز: -{settings.get('dur_10_discount', '?')} تومان", callback_data="noop")
@@ -269,7 +270,12 @@ def admin_settings_kb(settings: dict) -> InlineKeyboardMarkup:
     kb.button(text="✏️ تغییر تخفیف ۷ روزه", callback_data="edit_setting_dur_7")
     kb.button(text="✏️ تغییر تخفیف ۱۰ روزه", callback_data="edit_setting_dur_10")
     kb.button(text="✏️ تغییر تخفیف ۲۰ روزه", callback_data="edit_setting_dur_20")
+    # تنظیمات عمومی
+    kb.button(text=f"👥 بونس دعوت: {settings.get('referral_bonus', '5000')} تومان", callback_data="noop")
+    kb.button(text=f"🧪 روز تست رایگان: {settings.get('free_test_days', '3')}", callback_data="noop")
     kb.button(text="💳 تغییر شماره کارت", callback_data="admin_edit_card")
+    kb.button(text="✏️ تغییر بونس دعوت", callback_data="edit_setting_referral_bonus")
+    kb.button(text="✏️ تغییر روز تست رایگان", callback_data="edit_setting_free_test_days")
     kb.button(text="🔙 بازگشت", callback_data="admin_menu")
     kb.adjust(1)
     return kb.as_markup()

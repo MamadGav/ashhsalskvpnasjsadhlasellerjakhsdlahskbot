@@ -9,7 +9,7 @@ from database.engine import async_session
 from database.models import DiscountCode
 from keyboards.inline import admin_menu_kb, admin_discounts_kb, admin_discount_detail_kb, back_to_admin_kb
 from states.states import AdminDiscountCode
-from config import get_admin_ids
+from config import get_admin_ids, is_admin
 
 router = Router()
 

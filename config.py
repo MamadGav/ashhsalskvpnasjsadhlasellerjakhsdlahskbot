@@ -1,25 +1,41 @@
 """
 ⚙️ تنظیمات ربات تلگرام VPN
-مقادیر پیش‌فرض - ادمین‌ها و کارت از دیتابیس خوانده می‌شوند
+همه مقادیر از متغیرهای محیطی (Railway Variables) خوانده می‌شوند
 """
+import os
 
-# 🔑 توکن ربات تلگرام (از @BotFather)
-BOT_TOKEN = "8831134424:AAEzlaVEpYczXflhfxIaT3SHjAJDmJQeLmA"
+# 🔑 توکن ربات تلگرام (از Railway Variables)
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
-# 👑 آیدی عددی ادمین پیش‌فرض (از @userinfobot)
-DEFAULT_ADMIN_IDS = [7639233604, 969253435]
+# 👑 آیدی عددی ادمین‌ها (با کاما جدا کنید)
+_admin_str = os.getenv("ADMIN_IDS", "7639233604,969253435")
+DEFAULT_ADMIN_IDS = [int(x.strip()) for x in _admin_str.split(",") if x.strip()]
 
-# 💳 شماره کارت پیش‌فرض
-DEFAULT_CARD_NUMBER = "6104337812345678"
+# 💳 شماره کارت
+DEFAULT_CARD_NUMBER = os.getenv("CARD_NUMBER", "6104337812345678")
 
-# 👤 نام صاحب کارت پیش‌فرض
-DEFAULT_CARD_HOLDER = "غلام رضا "
+# 👤 نام صاحب کارت
+DEFAULT_CARD_HOLDER = os.getenv("CARD_HOLDER", "غلام رضا ")
 
-# 💰 مبلغ بونس دعوت دوستان (تومان)
-REFERRAL_BONUS = 5000
+# 💰 مبلغ بونس دعوت دوستان (تومان) - پیش‌فرض از env
+DEFAULT_REFERRAL_BONUS = int(os.getenv("REFERRAL_BONUS", "5000"))
 
-# 🧪 مدت اکانت تست رایگان (روز)
-FREE_TEST_DAYS = 3
+# 🧪 مدت اکانت تست رایگان (روز) - پیش‌فرض از env
+DEFAULT_FREE_TEST_DAYS = int(os.getenv("FREE_TEST_DAYS", "3"))
+
+
+async def get_referral_bonus() -> int:
+    """دریافت بونس رفرال از دیتابیس"""
+    from utils.pricing import get_settings
+    settings = await get_settings()
+    return int(settings.get("referral_bonus", str(DEFAULT_REFERRAL_BONUS)))
+
+
+async def get_free_test_days() -> int:
+    """دریافت روزهای تست رایگان از دیتابیس"""
+    from utils.pricing import get_settings
+    settings = await get_settings()
+    return int(settings.get("free_test_days", str(DEFAULT_FREE_TEST_DAYS)))
 
 
 async def get_admin_ids() -> list[int]:

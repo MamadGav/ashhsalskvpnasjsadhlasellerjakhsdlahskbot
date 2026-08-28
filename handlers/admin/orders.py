@@ -13,7 +13,7 @@ from keyboards.inline import (
 )
 from locales.fa import TEXTS
 from states.states import AdminConfigSend
-from config import get_admin_ids
+from config import get_admin_ids, is_admin
 
 router = Router()
 
@@ -141,7 +141,7 @@ async def cb_approve_order(callback: CallbackQuery, state: FSMContext):
 
 @router.message(AdminConfigSend.waiting_config)
 async def process_send_config(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
+    if not await is_admin(message.from_user.id):
         return
 
     data = await state.get_data()

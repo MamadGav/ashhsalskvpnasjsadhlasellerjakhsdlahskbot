@@ -8,7 +8,7 @@ from database.engine import async_session
 from database.models import User, ReferralLog
 from keyboards.inline import main_menu_kb
 from locales.fa import TEXTS
-from config import BOT_TOKEN, REFERRAL_BONUS, get_admin_ids
+from config import BOT_TOKEN, get_referral_bonus, get_admin_ids
 
 router = Router()
 
@@ -47,7 +47,7 @@ async def cmd_start(message: Message):
                 )
                 referrer = ref_result.scalar_one_or_none()
                 if referrer:
-                    bonus = Decimal(str(REFERRAL_BONUS))
+                    bonus = Decimal(str(await get_referral_bonus()))
                     referrer.wallet_balance += bonus
                     user.wallet_balance += bonus
 

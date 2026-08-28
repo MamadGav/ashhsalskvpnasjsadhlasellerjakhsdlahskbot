@@ -7,7 +7,7 @@ from database.engine import async_session
 from database.models import BotSettings
 from keyboards.inline import admin_menu_kb, admin_settings_kb, back_to_admin_kb
 from states.states import AdminEditProduct
-from config import get_admin_ids
+from config import get_admin_ids, is_admin
 
 router = Router()
 
@@ -36,6 +36,8 @@ _SETTING_LABELS = {
     "edit_setting_dur_7": ("dur_7_discount", "تخفیف ۷ روزه (تومان از قیمت پایه)"),
     "edit_setting_dur_10": ("dur_10_discount", "تخفیف ۱۰ روزه (تومان)"),
     "edit_setting_dur_20": ("dur_20_discount", "تخفیف ۲۰ روزه (تومان)"),
+    "edit_setting_referral_bonus": ("referral_bonus", "بونس دعوت از دوستان (تومان)"),
+    "edit_setting_free_test_days": ("free_test_days", "روزهای تست رایگان"),
 }
 
 
