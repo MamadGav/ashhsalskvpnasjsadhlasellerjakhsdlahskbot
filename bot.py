@@ -21,14 +21,16 @@ async def handle_health(request):
 
 
 async def start_http_server():
+    # Railway پورت رو از متغیر PORT میده
+    port = int(os.getenv("PORT", 8080))
     app = web.Application()
     app.router.add_get("/", handle_health)
     app.router.add_get("/health", handle_health)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", 8080)
+    site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    logging.info("🌐 HTTP server started on port 8080")
+    logging.info(f"🌐 HTTP server started on port {port}")
 
 
 # ─── Main ─────────────────────────────────────────────────────
@@ -43,9 +45,6 @@ async def main():
 
     # ساخت جداول دیتابیس
     await init_db()
-
-    # Start HTTP server (for Railway)
-    await start_http_server()
 
     bot = Bot(
         token=BOT_TOKEN,
@@ -80,6 +79,9 @@ async def main():
         admins.router,
         card.router,
     )
+
+    # Start HTTP server FIRST
+    await start_http_server()
 
     logging.info("🤖 Bot starting...")
     try:
