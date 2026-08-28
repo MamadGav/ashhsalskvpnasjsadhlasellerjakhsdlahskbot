@@ -203,6 +203,20 @@ async def cb_edit_prod_desc(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+# Edit product data/volume
+@router.callback_query(F.data.startswith("edit_prod_data_"))
+async def cb_edit_prod_data(callback: CallbackQuery, state: FSMContext):
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("⛔ دسترسی غیرمجاز", show_alert=True)
+        return
+
+    prod_id = int(callback.data.split("_")[3])
+    await callback.message.edit_text("📊 حجم جدید (GB) را وارد کنید:", reply_markup=back_to_admin_kb())
+    await state.set_state(AdminEditProduct.value)
+    await state.update_data(field="data_gb", product_id=prod_id)
+    await callback.answer()
+
+
 @router.message(AdminEditProduct.value)
 async def process_edit_product(message: Message, state: FSMContext):
     if not await is_admin(message.from_user.id):
@@ -234,6 +248,12 @@ async def process_edit_product(message: Message, state: FSMContext):
         elif field == "duration_days":
             try:
                 product.duration_days = int(message.text.strip())
+            except ValueError:
+                await message.answer("❌ لطفاً یک عدد صحیح وارد کنید:")
+                return
+        elif field == "data_gb":
+            try:
+                product.data_gb = int(message.text.strip())
             except ValueError:
                 await message.answer("❌ لطفاً یک عدد صحیح وارد کنید:")
                 return

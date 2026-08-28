@@ -49,6 +49,10 @@ async def cb_test_account(callback: CallbackQuery):
         order = Order(
             user_id=callback.from_user.id,
             product_id=test_product.id,
+            plan_type="test",
+            data_gb=test_product.data_gb,
+            duration_days=test_product.duration_days,
+            final_price=0,
             status=OrderStatus.pending,
             payment_method=PaymentMethod.wallet,
         )

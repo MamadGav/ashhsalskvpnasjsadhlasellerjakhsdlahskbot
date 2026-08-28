@@ -13,7 +13,7 @@ from keyboards.inline import (
 )
 from locales.fa import TEXTS
 from states.states import AdminConfigSend
-from config import get_admin_ids, is_admin
+from config import is_admin
 
 router = Router()
 
@@ -209,11 +209,8 @@ async def cb_reject_order(callback: CallbackQuery):
             user_result = await session.execute(select(User).where(User.telegram_id == order.user_id))
             user = user_result.scalar_one_or_none()
             if user:
-                prod_result = await session.execute(select(Product).where(Product.id == order.product_id))
-                product = prod_result.scalar_one_or_none()
-                if product:
-                    user.wallet_balance += product.price
-                    await session.commit()
+                user.wallet_balance += order.final_price
+                await session.commit()
 
     await callback.answer("❌ سفارش رد شد.", show_alert=True)
 

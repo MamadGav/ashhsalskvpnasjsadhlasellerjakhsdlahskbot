@@ -6,7 +6,7 @@ from sqlalchemy import select
 from database.engine import async_session
 from database.models import BotSettings
 from keyboards.inline import admin_menu_kb, admin_settings_kb, back_to_admin_kb
-from states.states import AdminEditProduct
+from states.states import AdminEditSetting
 from config import get_admin_ids, is_admin
 
 router = Router()
@@ -60,11 +60,11 @@ async def cb_edit_setting(callback: CallbackQuery, state: FSMContext):
         f"✏️ {label}\n\nمقدار فعلی: {current}\n\nمقدار جدید را وارد کنید:",
         reply_markup=back_to_admin_kb(),
     )
-    await state.set_state(AdminEditProduct.value)
+    await state.set_state(AdminEditSetting.value)
     await callback.answer()
 
 
-@router.message(AdminEditProduct.value)
+@router.message(AdminEditSetting.value)
 async def process_edit_setting(message: Message, state: FSMContext):
     if not await is_admin(message.from_user.id):
         return

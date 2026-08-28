@@ -6,14 +6,14 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 
 from database.engine import async_session
-from database.models import User, Payment, PaymentStatus, Ticket, TicketStatus
+from database.models import User, Payment, PaymentStatus, Ticket, TicketStatus, BotSettings
 from keyboards.inline import (
     admin_menu_kb, admin_support_reply_kb, admin_user_edit_kb, back_to_admin_kb,
     admin_card_list_kb, admin_card_detail_kb,
 )
 from locales.fa import TEXTS
 from states.states import AdminChargeWallet
-from config import get_admin_ids, is_admin
+from config import get_admin_ids, is_admin, add_admin, remove_admin
 
 router = Router()
 
@@ -143,6 +143,13 @@ async def cb_toggle_admin(callback: CallbackQuery):
             user.is_admin = not user.is_admin
             await session.commit()
 
+    # Sync with bot_settings admin_ids
+    if user:
+        if user.is_admin:
+            await add_admin(user_id)
+        else:
+            await remove_admin(user_id)
+
     await callback.answer("✅ وضعیت ادمین تغییر کرد.")
 
     async with async_session() as session:
@@ -202,12 +209,17 @@ async def process_admin_charge(message: Message, state: FSMContext):
         user = result.scalar_one_or_none()
         if user:
             user.wallet_balance += amount
+            new_balance = user.wallet_balance
             await session.commit()
+        else:
+            await message.answer(f"❌ کاربر {user_id} یافت نشد.", reply_markup=admin_menu_kb())
+            await state.clear()
+            return
 
     await message.answer(
         f"✅ موجودی کاربر {user_id} تغییر کرد.\n"
         f"💰 مبلغ: {amount:,.0f} تومان\n"
-        f"💰 موجودی جدید: {user.wallet_balance:,.0f} تومان",
+        f"💰 موجودی جدید: {new_balance:,.0f} تومان",
         reply_markup=admin_menu_kb(),
     )
     await state.clear()

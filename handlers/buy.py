@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from aiogram import Router, F
@@ -18,14 +19,6 @@ from config import get_card_info, get_admin_ids
 from utils.pricing import calc_custom_price, calc_preset_price
 
 router = Router()
-
-
-def _confirm_kb():
-    kb = InlineKeyboardBuilder()
-    kb.button(text="✅ تایید و پرداخت", callback_data="confirm_buy")
-    kb.button(text="❌ انصراف", callback_data="menu")
-    kb.adjust(1)
-    return kb.as_markup()
 
 
 # ─── Step 1: show plans ────────────────────────────────────────
@@ -193,7 +186,10 @@ async def process_discount_code(message: Message, state: FSMContext):
             )
         )).scalar_one_or_none()
 
-    if not disc or (disc.max_uses > 0 and disc.used_count >= disc.max_uses):
+    now = datetime.now(timezone.utc)
+    expired = disc.expires_at and disc.expires_at < now if disc else False
+
+    if not disc or expired or (disc.max_uses > 0 and disc.used_count >= disc.max_uses):
         await message.answer(
             "❌ کد تخفیف نامعتبر یا منقضی شده.\n💡 مجدداً تلاش کنید یا ادامه دهید.",
             reply_markup=discount_skip_kb(),
@@ -260,6 +256,7 @@ async def cb_pay_wallet(callback: CallbackQuery, state: FSMContext):
             reply_markup=back_to_menu_kb(),
         )
         await callback.answer()
+        await state.clear()
         return
 
     name = data.get("product_name", "?")
@@ -290,26 +287,24 @@ async def cb_confirm_wallet(callback: CallbackQuery, state: FSMContext):
     discount_code = data.get("discount_code")
     discount_percent = int(data.get("discount_percent", 0))
 
+    # Single session: check + deduct with row lock to prevent double-spend
     async with async_session() as session:
         user = (await session.execute(
-            select(User).where(User.telegram_id == callback.from_user.id)
+            select(User).where(User.telegram_id == callback.from_user.id).with_for_update()
         )).scalar_one_or_none()
 
-    if not user or user.wallet_balance < final_price:
-        await callback.message.edit_text(
-            TEXTS["insufficient_balance"].format(
-                balance=f"{user.wallet_balance:,.0f}" if user else "0",
-                price=f"{final_price:,.0f}",
-            ),
-            reply_markup=back_to_menu_kb(),
-        )
-        await callback.answer()
-        return
+        if not user or user.wallet_balance < final_price:
+            await callback.message.edit_text(
+                TEXTS["insufficient_balance"].format(
+                    balance=f"{user.wallet_balance:,.0f}" if user else "0",
+                    price=f"{final_price:,.0f}",
+                ),
+                reply_markup=back_to_menu_kb(),
+            )
+            await callback.answer()
+            await state.clear()
+            return
 
-    async with async_session() as session:
-        user = (await session.execute(
-            select(User).where(User.telegram_id == callback.from_user.id)
-        )).scalar_one_or_none()
         user.wallet_balance -= final_price
 
         order = Order(

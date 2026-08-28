@@ -68,9 +68,9 @@ async def process_card_holder(message: Message, state: FSMContext):
         f"نام: {card_holder}"
     )
 
-    from utils.pricing import get_settings
-    settings = await get_settings()
+    from utils.pricing import get_settings as _get_settings
+    _settings = await _get_settings()
     await message.answer(
         "⚙️ تنظیمات قیمت‌گذاری\n━━━━━━━━━━━━━━━━━━━━━",
-        reply_markup=admin_settings_kb(settings),
+        reply_markup=admin_settings_kb(_settings),
     )

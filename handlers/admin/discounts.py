@@ -35,7 +35,7 @@ async def cb_admin_discounts(callback: CallbackQuery):
         return
 
     await callback.message.edit_text(
-        f"🏷️ مدیریت کد تخفیف\n━━━━━━━━━━━━━━━━━━━━━\n\n总计: {len(codes)} کد",
+        f"🏷️ مدیریت کد تخفیف\n━━━━━━━━━━━━━━━━━━━━━\n\nمجموع: {len(codes)} کد",
         reply_markup=admin_discounts_kb(codes),
     )
     await callback.answer()
@@ -295,7 +295,7 @@ async def cb_delete_discount(callback: CallbackQuery):
 
     if codes:
         await callback.message.edit_text(
-            f"🏷️ مدیریت کد تخفیف\n━━━━━━━━━━━━━━━━━━━━━\n总计: {len(codes)} کد",
+            f"🏷️ مدیریت کد تخفیف\n━━━━━━━━━━━━━━━━━━━━━\nمجموع: {len(codes)} کد",
             reply_markup=admin_discounts_kb(codes),
         )
     else:

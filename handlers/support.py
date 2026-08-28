@@ -92,9 +92,50 @@ async def cb_admin_reply_ticket(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         f"💬 پاسخ به تیکت #{ticket_id}\n\n📝 متن پاسخ را ارسال کنید:",
     )
-    await state.set_state(SupportState.waiting_message)
-    await state.update_data(ticket_id=ticket_id, is_admin_reply=True)
+    await state.set_state(SupportState.admin_reply)
+    await state.update_data(ticket_id=ticket_id)
     await callback.answer()
+
+
+@router.message(SupportState.admin_reply)
+async def process_admin_reply(message: Message, state: FSMContext):
+    admin_ids = await get_admin_ids()
+    if message.from_user.id not in admin_ids:
+        return
+
+    data = await state.get_data()
+    ticket_id = data["ticket_id"]
+
+    async with async_session() as session:
+        msg = TicketMessage(
+            ticket_id=ticket_id,
+            sender_id=message.from_user.id,
+            text=message.text or "پاسخ ادمین",
+        )
+        session.add(msg)
+        await session.commit()
+
+        # Get ticket owner
+        ticket = (await session.execute(
+            select(Ticket).where(Ticket.id == ticket_id)
+        )).scalar_one_or_none()
+
+    await message.answer(
+        f"✅ پاسخ به تیکت #{ticket_id} ارسال شد.",
+        reply_markup=back_to_menu_kb(),
+    )
+    await state.clear()
+
+    # Notify ticket owner
+    if ticket:
+        try:
+            await message.bot.send_message(
+                ticket.user_id,
+                f"💬 پاسخ جدید به تیکت #{ticket_id}:\n\n{message.text}",
+                reply_markup=back_to_menu_kb(),
+            )
+        except Exception:
+            pass
 
 
 @router.callback_query(F.data.startswith("admin_close_ticket_"))
@@ -117,6 +158,17 @@ async def cb_admin_close_ticket(callback: CallbackQuery):
 
     await callback.message.edit_text(f"✅ تیکت #{ticket_id} بسته شد.")
     await callback.answer()
+
+    # Notify ticket owner
+    if ticket:
+        try:
+            await callback.bot.send_message(
+                ticket.user_id,
+                f"✅ تیکت #{ticket_id} شما توسط پشتیبانی بسته شد.\n"
+                f"📞 در صورت نیاز مجدداً تیکت جدید باز کنید.",
+            )
+        except Exception:
+            pass
 
 
 @router.callback_query(F.data == "tutorial")

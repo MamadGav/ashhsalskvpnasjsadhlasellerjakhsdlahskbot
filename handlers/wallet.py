@@ -43,7 +43,7 @@ async def cb_wallet_card(callback: CallbackQuery, state: FSMContext):
 @router.message(WalletCharge.enter_amount)
 async def process_enter_amount(message: Message, state: FSMContext):
     try:
-        amount = Decimal(message.text.replace(",", "").replace(".", "").strip())
+        amount = Decimal(message.text.replace(",", "").strip())
     except (InvalidOperation, ValueError, AttributeError):
         await message.answer(TEXTS["wallet_invalid_amount"])
         return

@@ -15,6 +15,7 @@ class BuyService(StatesGroup):
 
 class SupportState(StatesGroup):
     waiting_message = State()
+    admin_reply = State()
 
 
 class AdminAddProduct(StatesGroup):
@@ -25,6 +26,10 @@ class AdminAddProduct(StatesGroup):
 
 
 class AdminEditProduct(StatesGroup):
+    value = State()
+
+
+class AdminEditSetting(StatesGroup):
     value = State()
 
 
