@@ -17,6 +17,8 @@ PRESET_PLANS = [
     ("60 گیگ", 60, 30, Decimal("230000")),
 ]
 
+TEST_PLAN = ("🧪 اکانت تست رایگان", 1, 3, Decimal("0"))
+
 DEFAULT_SETTINGS = {
     "price_per_gb": "4500",              # تومان - قیمت هر گیگ (برای سفارشی)
     "dur_7_discount": "6000",            # کمتر از 30 روزه
@@ -46,9 +48,20 @@ async def seed():
                     name=name, data_gb=data_gb,
                     description=f"پلن {name} - {duration} روزه",
                     duration_days=duration, price=price,
-                    is_active=True,
+                    is_active=True, is_test=False,
                 ))
                 added += 1
+
+        # Seed test plan (is_test=True)
+        test_name = TEST_PLAN[0]
+        if test_name not in existing_names:
+            session.add(Product(
+                name=test_name, data_gb=TEST_PLAN[1],
+                description="اکانت تست رایگان",
+                duration_days=TEST_PLAN[2], price=TEST_PLAN[3],
+                is_active=True, is_test=True,
+            ))
+            added += 1
 
         # Seed settings
         existing_settings = (await session.execute(select(BotSettings))).scalars().all()

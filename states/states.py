@@ -22,6 +22,7 @@ class AdminAddProduct(StatesGroup):
     name = State()
     description = State()
     duration = State()
+    type = State()
     price = State()
 
 

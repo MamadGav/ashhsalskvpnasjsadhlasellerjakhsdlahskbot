@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -5,7 +7,10 @@ from sqlalchemy import select
 
 from database.engine import async_session
 from database.models import Product
-from keyboards.inline import admin_products_kb, admin_menu_kb, back_to_admin_kb, admin_product_edit_kb
+from keyboards.inline import (
+    admin_products_kb, admin_menu_kb, back_to_admin_kb, admin_product_edit_kb,
+    admin_product_type_kb,
+)
 from locales.fa import TEXTS
 from states.states import AdminAddProduct, AdminEditProduct
 from config import get_admin_ids, is_admin
@@ -241,7 +246,7 @@ async def process_edit_product(message: Message, state: FSMContext):
             product.name = message.text.strip()
         elif field == "price":
             try:
-                product.price = int(message.text.replace(",", "").strip())
+                product.price = Decimal(message.text.replace(",", "").strip())
             except ValueError:
                 await message.answer("❌ لطفاً یک عدد صحیح وارد کنید:")
                 return
@@ -281,6 +286,48 @@ async def cb_add_product(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+# Product type selected (sell/test)
+@router.callback_query(F.data.startswith("prodtype_"), AdminAddProduct.type)
+async def cb_product_type(callback: CallbackQuery, state: FSMContext):
+    if not await is_admin(callback.from_user.id):
+        await callback.answer("⛔ دسترسی غیرمجاز", show_alert=True)
+        return
+
+    ptype = "test" if callback.data == "prodtype_test" else "sell"
+    data = await state.get_data()
+
+    if ptype == "test":
+        # Test plan: create directly with zero price
+        async with async_session() as session:
+            product = Product(
+                name=data["name"],
+                description=data["description"],
+                duration_days=data["duration"],
+                data_gb=0,
+                price=Decimal("0"),
+                is_active=True,
+                is_test=True,
+            )
+            session.add(product)
+            await session.commit()
+
+        await callback.message.answer(
+            "✅ پلن تست ساخته شد!\n\n"
+            f"📝 نام: {data['name']}\n"
+            f"⏰ مدت: {data['duration']} روز\n"
+            "💡 کاربران فقط یک بار می‌توانند از آن استفاده کنند.",
+            reply_markup=admin_menu_kb(),
+        )
+        await state.clear()
+        await callback.answer()
+        return
+
+    await state.update_data(is_test=False)
+    await callback.message.answer("💰 قیمت پلن به تومان را وارد کنید:")
+    await state.set_state(AdminAddProduct.price)
+    await callback.answer()
+
+
 @router.message(AdminAddProduct.name)
 async def process_product_name(message: Message, state: FSMContext):
     if not await is_admin(message.from_user.id):
@@ -309,8 +356,11 @@ async def process_product_duration(message: Message, state: FSMContext):
         await message.answer("❌ لطفاً یک عدد صحیح وارد کنید:")
         return
     await state.update_data(duration=duration)
-    await message.answer("💰 قیمت پلن به تومان را وارد کنید:")
-    await state.set_state(AdminAddProduct.price)
+    await message.answer(
+        "🏷️ نوع پلن را انتخاب کنید:",
+        reply_markup=admin_product_type_kb(),
+    )
+    await state.set_state(AdminAddProduct.type)
 
 
 @router.message(AdminAddProduct.price)
@@ -318,7 +368,7 @@ async def process_product_price(message: Message, state: FSMContext):
     if not await is_admin(message.from_user.id):
         return
     try:
-        price = int(message.text.replace(",", "").strip())
+        price = Decimal(message.text.replace(",", "").strip())
     except ValueError:
         await message.answer("❌ لطفاً یک عدد صحیح وارد کنید:")
         return

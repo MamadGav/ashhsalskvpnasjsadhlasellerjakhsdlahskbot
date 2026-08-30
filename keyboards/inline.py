@@ -172,7 +172,8 @@ def admin_products_kb(products: list) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for p in products:
         s = "✅" if p.is_active else "❌"
-        kb.button(text=f"{s} {p.name} | {p.price:,.0f}t", callback_data=f"admin_view_prod_{p.id}")
+        badge = " 🧪" if p.is_test else ""
+        kb.button(text=f"{s}{badge} {p.name} | {p.price:,.0f}t", callback_data=f"admin_view_prod_{p.id}")
     kb.button(text="➕ افزودن پلن", callback_data="admin_add_product")
     kb.button(text="🔙 بازگشت", callback_data="admin_menu")
     kb.adjust(1)
@@ -255,6 +256,15 @@ def admin_remove_admin_kb(admin_ids: list) -> InlineKeyboardMarkup:
         kb.button(text=f"❌ حذف {admin_id}", callback_data=f"admin_remove_admin_{admin_id}")
     kb.button(text="🔙 بازگشت", callback_data="admin_manage_admins")
     kb.adjust(1)
+    return kb.as_markup()
+
+
+def admin_product_type_kb() -> InlineKeyboardMarkup:
+    """انتخاب نوع پلن هنگام افزودن (فروش/تست)"""
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🛒 پلن فروش", callback_data="prodtype_sell")
+    kb.button(text="🧪 پلن تست", callback_data="prodtype_test")
+    kb.adjust(2)
     return kb.as_markup()
 
 

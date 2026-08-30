@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 
 from aiogram import Router, F
@@ -186,7 +186,7 @@ async def process_discount_code(message: Message, state: FSMContext):
             )
         )).scalar_one_or_none()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     expired = disc.expires_at and disc.expires_at < now if disc else False
 
     if not disc or expired or (disc.max_uses > 0 and disc.used_count >= disc.max_uses):

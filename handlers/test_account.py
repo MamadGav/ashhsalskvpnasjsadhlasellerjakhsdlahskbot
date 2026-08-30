@@ -6,13 +6,15 @@ from database.engine import async_session
 from database.models import User, Product, Order, OrderStatus, PaymentMethod
 from keyboards.inline import back_to_menu_kb
 from locales.fa import TEXTS
-from config import get_admin_ids
+from config import get_admin_ids, get_free_test_days
 
 router = Router()
 
 
 @router.callback_query(F.data == "test_account")
 async def cb_test_account(callback: CallbackQuery):
+    free_days = await get_free_test_days()
+
     async with async_session() as session:
         user_result = await session.execute(
             select(User).where(User.telegram_id == callback.from_user.id)
@@ -35,23 +37,24 @@ async def cb_test_account(callback: CallbackQuery):
         prod_result = await session.execute(
             select(Product).where(Product.is_test == True, Product.is_active == True)
         )
-        test_product = prod_result.scalar_one_or_none()
+        test_product = prod_result.scalars().first()
 
         if not test_product:
             await callback.message.edit_text(
-                TEXTS["buy_empty"],
+                TEXTS["test_unavailable"],
                 reply_markup=back_to_menu_kb(),
             )
             await callback.answer()
             return
 
-        # Create test order
+        # Create test order — duration from test product if set, else from free_test_days setting
+        duration = test_product.duration_days if test_product.duration_days > 0 else free_days
         order = Order(
             user_id=callback.from_user.id,
             product_id=test_product.id,
             plan_type="test",
             data_gb=test_product.data_gb,
-            duration_days=test_product.duration_days,
+            duration_days=duration,
             final_price=0,
             status=OrderStatus.pending,
             payment_method=PaymentMethod.wallet,
@@ -59,6 +62,7 @@ async def cb_test_account(callback: CallbackQuery):
         session.add(order)
         user.used_test = True
         await session.commit()
+        order_id = order.id
 
     await callback.message.edit_text(
         TEXTS["test_success"],
@@ -74,10 +78,10 @@ async def cb_test_account(callback: CallbackQuery):
                 admin_id,
                 f"🧪 اکانت تست درخواست شده\n"
                 f"━━━━━━━━━━━━━━━━━━━━━\n"
-                f"👤 کاربر: {callback.from_user.first_name} (@{callback.from_user.username})\n"
+                f"👤 کاربر: {callback.from_user.first_name} (@{callback.from_user.username or 'ندارد'})\n"
                 f"🆔 آیدی: {callback.from_user.id}\n"
-                f"📦 پلن: {test_product.name} ({test_product.duration_days} روز)\n\n"
-                f"💡 لینک کانفیگ را ارسال کنید.",
+                f"📋 سفارش: #{order_id} | {duration} روزه\n\n"
+                f"💡 لینک کانفیگ را از بخش «سفارشات در انتظار» ارسال کنید.",
             )
         except Exception:
             pass
