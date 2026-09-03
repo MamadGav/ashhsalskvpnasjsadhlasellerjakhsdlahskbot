@@ -1,14 +1,16 @@
 from decimal import Decimal
 from aiogram import Router, F
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy import select
 
 from database.engine import async_session
 from database.models import User, ReferralLog
 from keyboards.inline import main_menu_kb
-from locales.fa import TEXTS
 from config import BOT_TOKEN, get_referral_bonus, get_admin_ids
+from utils.icons import tg
+from utils.texts import t, esc
 
 router = Router()
 
@@ -60,9 +62,9 @@ async def cmd_start(message: Message):
                     await session.commit()
 
                     await message.answer(
-                        TEXTS["welcome_referral"].format(
-                            name=user.first_name or "کاربر",
-                            referrer=referrer.first_name or "کاربر",
+                        (await t("welcome_referral")).format(
+                            name=esc(user.first_name or "کاربر"),
+                            referrer=esc(referrer.first_name or "کاربر"),
                             bonus=f"{bonus:,.0f}",
                         ),
                         reply_markup=main_menu_kb(),
@@ -75,15 +77,19 @@ async def cmd_start(message: Message):
             await session.commit()
 
     await message.answer(
-        TEXTS["welcome"].format(name=message.from_user.first_name or "کاربر"),
+        (await t("welcome")).format(
+            name=esc(message.from_user.first_name or "کاربر"),
+            gem=tg("gem"), lock=tg("lock"), bolt=tg("bolt"),
+        ),
         reply_markup=main_menu_kb(),
     )
 
 
 @router.callback_query(F.data == "menu")
-async def cb_menu(callback):
+async def cb_menu(callback, state: FSMContext):
+    await state.clear()
     await callback.message.edit_text(
-        TEXTS["menu"],
+        await t("menu"),
         reply_markup=main_menu_kb(),
     )
     await callback.answer()

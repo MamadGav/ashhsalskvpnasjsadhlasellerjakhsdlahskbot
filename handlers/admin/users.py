@@ -11,9 +11,9 @@ from keyboards.inline import (
     admin_menu_kb, admin_support_reply_kb, admin_user_edit_kb, back_to_admin_kb,
     admin_card_list_kb, admin_card_detail_kb,
 )
-from locales.fa import TEXTS
 from states.states import AdminChargeWallet
 from config import get_admin_ids, is_admin, add_admin, remove_admin
+from utils.texts import esc
 
 router = Router()
 
@@ -35,15 +35,15 @@ async def cb_admin_users(callback: CallbackQuery):
         status = "🚫" if user.is_banned else "✅"
         admin_badge = " 👑" if user.is_admin else ""
         lines.append(
-            f"\n{status}{admin_badge} {user.first_name or 'نامشخص'} "
-            f"(@{user.username or 'ندارد'})\n"
+            f"\n{status}{admin_badge} {esc(user.first_name or 'نامشخص')} "
+            f"(@{esc(user.username or 'ندارد')})\n"
             f"💰 {user.wallet_balance:,.0f} تومان | ID: {user.telegram_id}"
         )
 
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
     for user in users:
-        name = user.first_name or "نامشخص"
+        name = esc(user.first_name or "نامشخص")
         kb.button(text=f"👤 {name}", callback_data=f"admin_view_user_{user.telegram_id}")
     kb.button(text="🔙 بازگشت", callback_data="admin_menu")
     kb.adjust(1)
@@ -260,7 +260,7 @@ async def cb_admin_card_transfers(callback: CallbackQuery):
     for i, item in enumerate(items, 1):
         pay = item["payment"]
         user = item["user"]
-        user_name = (user.first_name or "نامشخص") if user else "نامشخص"
+        user_name = esc((user.first_name or "نامشخص") if user else "نامشخص")
         time_str = pay.created_at.strftime("%H:%M") if pay.created_at else ""
         lines.append(f"\n{i}. 🆔 #{pay.id} | 👤 {user_name} | 💰 {pay.amount:,.0f}t | ⏰ {time_str}")
 
@@ -288,9 +288,9 @@ async def cb_view_card(callback: CallbackQuery):
         user_result = await session.execute(select(User).where(User.telegram_id == payment.user_id))
         user = user_result.scalar_one_or_none()
 
-    user_name = (user.first_name or "نامشخص") if user else "نامشخص"
-    user_uname = f"@{user.username}" if user and user.username else "ندارد"
-    desc = payment.description or "ندارد"
+    user_name = esc((user.first_name or "نامشخص") if user else "نامشخص")
+    user_uname = f"@{esc(user.username)}" if user and user.username else "ندارد"
+    desc = esc(payment.description or "ندارد")
 
     text = (
         f"⇜ جزئیات تراکنش #{payment.id}\n"
@@ -342,9 +342,10 @@ async def cb_accept_card(callback: CallbackQuery):
         await session.commit()
 
     try:
+        from utils.texts import t
         await callback.bot.send_message(
             payment.user_id,
-            TEXTS["card_transfer_approved"].format(amount=f"{payment.amount:,.0f}"),
+            (await t("card_transfer_approved")).format(amount=f"{payment.amount:,.0f}"),
         )
     except Exception:
         pass

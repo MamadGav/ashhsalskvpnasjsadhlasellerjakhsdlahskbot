@@ -5,7 +5,7 @@ from sqlalchemy import select
 from database.engine import async_session
 from database.models import User, Order, OrderStatus, Product
 from keyboards.inline import back_to_menu_kb
-from locales.fa import TEXTS
+from utils.texts import t, esc
 
 router = Router()
 
@@ -34,31 +34,31 @@ async def cb_my_services(callback: CallbackQuery):
 
     if not orders_data:
         await callback.message.edit_text(
-            TEXTS["my_services_empty"],
+            await t("my_services_empty"),
             reply_markup=back_to_menu_kb(),
         )
         await callback.answer()
         return
 
-    lines = [TEXTS["my_services"]]
+    lines = [await t("my_services")]
     for item in orders_data:
         order = item["order"]
         product = item["product"]
         expires = order.expires_at.strftime("%Y/%m/%d") if order.expires_at else "نامشخص"
         status = "✅ فعال" if order.config_link else "⏳ در انتظار کانفیگ"
-        product_text = TEXTS["service_item"].format(
+        product_text = (await t("service_item")).format(
             order_id=order.id,
-            product_name=product.name if product else "نامشخص",
+            product_name=esc(product.name if product else "نامشخص"),
             expires=expires,
             status=status,
         )
         lines.append(product_text)
         if order.config_link:
-            lines.append(TEXTS["service_config"].format(config=order.config_link))
+            lines.append((await t("service_config")).format(config=esc(order.config_link)))
 
     await callback.message.edit_text(
         "\n".join(lines),
         reply_markup=back_to_menu_kb(),
-        parse_mode="Markdown",
+        parse_mode="HTML",
     )
     await callback.answer()

@@ -12,7 +12,7 @@ from config import BOT_TOKEN
 from middlewares.auth import AuthMiddleware
 
 from handlers import start, menu, buy, test_account, my_services, wallet, referral, support
-from handlers.admin import dashboard, orders, products, users, discounts, settings, admins, card
+from handlers.admin import dashboard, orders, products, users, discounts, settings, admins, card, texts
 
 
 # ─── Simple HTTP server for Railway health check ──────────────
@@ -78,6 +78,7 @@ async def main():
         settings.router,
         admins.router,
         card.router,
+        texts.router,
     )
 
     # Start HTTP server FIRST

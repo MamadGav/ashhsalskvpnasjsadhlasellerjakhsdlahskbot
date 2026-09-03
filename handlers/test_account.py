@@ -5,7 +5,7 @@ from sqlalchemy import select
 from database.engine import async_session
 from database.models import User, Product, Order, OrderStatus, PaymentMethod
 from keyboards.inline import back_to_menu_kb
-from locales.fa import TEXTS
+from utils.texts import t, esc
 from config import get_admin_ids, get_free_test_days
 
 router = Router()
@@ -27,7 +27,7 @@ async def cb_test_account(callback: CallbackQuery):
 
         if user.used_test:
             await callback.message.edit_text(
-                TEXTS["test_used"],
+                await t("test_used"),
                 reply_markup=back_to_menu_kb(),
             )
             await callback.answer()
@@ -41,7 +41,7 @@ async def cb_test_account(callback: CallbackQuery):
 
         if not test_product:
             await callback.message.edit_text(
-                TEXTS["test_unavailable"],
+                await t("test_unavailable"),
                 reply_markup=back_to_menu_kb(),
             )
             await callback.answer()
@@ -65,7 +65,7 @@ async def cb_test_account(callback: CallbackQuery):
         order_id = order.id
 
     await callback.message.edit_text(
-        TEXTS["test_success"],
+        await t("test_success"),
         reply_markup=back_to_menu_kb(),
     )
     await callback.answer()
@@ -78,7 +78,7 @@ async def cb_test_account(callback: CallbackQuery):
                 admin_id,
                 f"🧪 اکانت تست درخواست شده\n"
                 f"━━━━━━━━━━━━━━━━━━━━━\n"
-                f"👤 کاربر: {callback.from_user.first_name} (@{callback.from_user.username or 'ندارد'})\n"
+                f"👤 کاربر: {esc(callback.from_user.first_name)} (@{esc(callback.from_user.username or 'ندارد')})\n"
                 f"🆔 آیدی: {callback.from_user.id}\n"
                 f"📋 سفارش: #{order_id} | {duration} روزه\n\n"
                 f"💡 لینک کانفیگ را از بخش «سفارشات در انتظار» ارسال کنید.",

@@ -11,9 +11,9 @@ from keyboards.inline import (
     admin_menu_kb, back_to_admin_kb,
     admin_orders_list_kb, admin_order_detail_kb,
 )
-from locales.fa import TEXTS
 from states.states import AdminConfigSend
 from config import is_admin
+from utils.texts import esc
 
 router = Router()
 
@@ -62,8 +62,8 @@ async def cb_admin_pending_orders(callback: CallbackQuery):
         o = item["order"]
         p = item["product"]
         u = item["user"]
-        user_name = (u.first_name or "نامشخص") if u else "نامشخص"
-        prod_name = p.name if p else "نامشخص"
+        user_name = esc((u.first_name or "نامشخص") if u else "نامشخص")
+        prod_name = esc(p.name if p else "نامشخص")
         price = f"{p.price:,.0f}" if p else "0"
         pay_method = _pay_method_str(o)
         lines.append(f"\n{i}. 🆔 #{o.id} | 👤 {user_name}\n   📦 {prod_name} | {price}t | {pay_method}")
@@ -95,9 +95,9 @@ async def cb_view_order(callback: CallbackQuery):
         user_result = await session.execute(select(User).where(User.telegram_id == order.user_id))
         user = user_result.scalar_one_or_none()
 
-    user_name = (user.first_name or "نامشخص") if user else "نامشخص"
-    user_uname = f"@{user.username}" if user and user.username else "ندارد"
-    prod_name = product.name if product else "نامشخص"
+    user_name = esc((user.first_name or "نامشخص") if user else "نامشخص")
+    user_uname = f"@{esc(user.username)}" if user and user.username else "ندارد"
+    prod_name = esc(product.name if product else "نامشخص")
     prod_desc = (product.description or "ندارد") if product else "ندارد"
     prod_price = f"{product.price:,.0f}" if product else "0"
     prod_dur = product.duration_days if product else 0
@@ -177,7 +177,7 @@ async def process_send_config(message: Message, state: FSMContext):
         await message.bot.send_message(
             order.user_id,
             f"✅ سفارش شما #{order_id} تایید شد!\n\n"
-            f"🔑 کانفیگ:\n{order.config_link}\n\n"
+            f"🔑 کانفیگ:\n{esc(order.config_link)}\n\n"
             f"📖 برای آموزش استفاده از بخش آموزش استفاده کنید.",
         )
     except Exception:

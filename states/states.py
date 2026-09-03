@@ -56,3 +56,7 @@ class AdminManageAdmin(StatesGroup):
 class AdminEditCard(StatesGroup):
     waiting_number = State()
     waiting_holder = State()
+
+
+class AdminEditText(StatesGroup):
+    value = State()

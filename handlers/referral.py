@@ -5,7 +5,7 @@ from sqlalchemy import select, func
 from database.engine import async_session
 from database.models import User, ReferralLog
 from keyboards.inline import back_to_menu_kb
-from locales.fa import TEXTS
+from utils.texts import t
 from config import get_referral_bonus
 
 router = Router()
@@ -35,13 +35,13 @@ async def cb_referral(callback: CallbackQuery):
     bonus = await get_referral_bonus()
 
     await callback.message.edit_text(
-        TEXTS["referral_title"].format(
+        (await t("referral_title")).format(
             bonus=f"{bonus:,}",
             link=referral_link,
             count=referral_count,
             total_bonus=f"{total_bonus:,.0f}",
         ),
         reply_markup=back_to_menu_kb(),
-        parse_mode="Markdown",
+        parse_mode="HTML",
     )
     await callback.answer()

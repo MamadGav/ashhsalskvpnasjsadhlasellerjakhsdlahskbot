@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from database.engine import async_session
 from database.models import User
+from utils.texts import t
 
 
 class AuthMiddleware(BaseMiddleware):
@@ -23,10 +24,11 @@ class AuthMiddleware(BaseMiddleware):
             user = result.scalar_one_or_none()
 
         if user and user.is_banned:
+            banned_text = (await t("banned"))[:200]
             if isinstance(event, Message):
-                await event.answer("⛔ حساب شما مسدود شده است.")
+                await event.answer(banned_text)
             elif isinstance(event, CallbackQuery):
-                await event.answer("⛔ حساب شما مسدود شده است.", show_alert=True)
+                await event.answer(banned_text, show_alert=True)
             return
 
         data["db_user"] = user

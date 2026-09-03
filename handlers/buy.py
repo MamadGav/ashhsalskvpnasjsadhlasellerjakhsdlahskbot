@@ -13,10 +13,10 @@ from keyboards.inline import (
     custom_plan_gb_kb, custom_plan_duration_kb,
     payment_choice_kb, confirm_buy_kb, discount_skip_kb,
 )
-from locales.fa import TEXTS
 from states.states import BuyService
 from config import get_card_info, get_admin_ids
 from utils.pricing import calc_custom_price, calc_preset_price
+from utils.texts import t, esc
 
 router = Router()
 
@@ -31,7 +31,7 @@ async def cb_buy(callback: CallbackQuery):
         products = result.scalars().all()
 
     if not products:
-        await callback.message.edit_text(TEXTS["buy_empty"], reply_markup=back_to_menu_kb())
+        await callback.message.edit_text(await t("buy_empty"), reply_markup=back_to_menu_kb())
         await callback.answer()
         return
 
@@ -65,7 +65,7 @@ async def cb_select_product(callback: CallbackQuery, state: FSMContext):
     )
 
     await callback.message.edit_text(
-        f"📦 {product.name}\n"
+        f"📦 {esc(product.name)}\n"
         f"━━━━━━━━━━━━━━━━━━━━━\n"
         f"📊 حجم: {product.data_gb} گیگ\n\n"
         f"💰 ۳۰ روزه: {price_30:,.0f} تومان\n"
@@ -209,7 +209,7 @@ async def process_discount_code(message: Message, state: FSMContext):
 
     await message.answer(
         f"✅ کد {code_text} اعمال شد ({disc.percent}%)\n\n"
-        f"📦 {name} | {days} روزه\n"
+        f"📦 {esc(name)} | {days} روزه\n"
         f"💰 قیمت: {price:,.0f} → {final_price:,.0f} تومان\n\n"
         f"روش پرداخت:",
         reply_markup=payment_choice_kb(),
@@ -227,7 +227,7 @@ async def cb_skip_discount(callback: CallbackQuery, state: FSMContext):
     days = data.get("duration_days", 30)
 
     await callback.message.edit_text(
-        f"📦 {name} | {days} روزه\n"
+        f"📦 {esc(name)} | {days} روزه\n"
         f"💰 قیمت: {price:,.0f} تومان\n\n"
         f"روش پرداخت:",
         reply_markup=payment_choice_kb(),
@@ -249,7 +249,7 @@ async def cb_pay_wallet(callback: CallbackQuery, state: FSMContext):
 
     if not user or user.wallet_balance < final_price:
         await callback.message.edit_text(
-            TEXTS["insufficient_balance"].format(
+            (await t("insufficient_balance")).format(
                 balance=f"{user.wallet_balance:,.0f}" if user else "0",
                 price=f"{final_price:,.0f}",
             ),
@@ -265,10 +265,10 @@ async def cb_pay_wallet(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.edit_text(
         f"🛒 تایید خرید\n━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📦 {name} | {days} روزه\n"
+        f"📦 {esc(name)} | {days} روزه\n"
         f"💰 قیمت نهایی: {final_price:,.0f} تومان\n"
         f"💳 روش: کیف پول"
-        + (f"\n🏷️ تخفیف: {disc_code}" if disc_code else "")
+        + (f"\n🏷️ تخفیف: {esc(disc_code)}" if disc_code else "")
         + f"\n\nآیا مطمئن هستید؟",
         reply_markup=confirm_buy_kb(),
     )
@@ -295,7 +295,7 @@ async def cb_confirm_wallet(callback: CallbackQuery, state: FSMContext):
 
         if not user or user.wallet_balance < final_price:
             await callback.message.edit_text(
-                TEXTS["insufficient_balance"].format(
+                (await t("insufficient_balance")).format(
                     balance=f"{user.wallet_balance:,.0f}" if user else "0",
                     price=f"{final_price:,.0f}",
                 ),
@@ -331,7 +331,7 @@ async def cb_confirm_wallet(callback: CallbackQuery, state: FSMContext):
         await session.commit()
 
     await callback.message.edit_text(
-        TEXTS["buy_success"].format(order_id=order.id),
+        (await t("buy_success")).format(order_id=order.id),
         reply_markup=back_to_menu_kb(),
     )
     await callback.answer()
@@ -345,8 +345,8 @@ async def cb_confirm_wallet(callback: CallbackQuery, state: FSMContext):
                 admin_id,
                 f"🛒 سفارش جدید #{order.id}\n"
                 f"━━━━━━━━━━━━━━━━━━━━━\n"
-                f"👤 {callback.from_user.first_name} (ID: {callback.from_user.id})\n"
-                f"📦 {product_name} | {duration} روزه\n"
+                f"👤 {esc(callback.from_user.first_name)} (ID: {callback.from_user.id})\n"
+                f"📦 {esc(product_name)} | {duration} روزه\n"
                 f"💰 {final_price:,.0f} تومان | 💳 کیف پول{disc_info}",
             )
         except Exception:
@@ -415,7 +415,7 @@ async def process_card_receipt(message: Message, state: FSMContext):
 
         await session.commit()
 
-    await message.answer(TEXTS["buy_success"].format(order_id=order.id), reply_markup=back_to_menu_kb())
+    await message.answer((await t("buy_success")).format(order_id=order.id), reply_markup=back_to_menu_kb())
     await state.clear()
 
     disc_info = f"\n🏷️ {discount_code} ({discount_percent}%)" if discount_code else ""
@@ -426,8 +426,8 @@ async def process_card_receipt(message: Message, state: FSMContext):
                 admin_id,
                 f"🛒 سفارش جدید #{order.id}\n"
                 f"━━━━━━━━━━━━━━━━━━━━━\n"
-                f"👤 {message.from_user.first_name} (ID: {message.from_user.id})\n"
-                f"📦 {product_name} | {duration} روزه\n"
+                f"👤 {esc(message.from_user.first_name)} (ID: {message.from_user.id})\n"
+                f"📦 {esc(product_name)} | {duration} روزه\n"
                 f"💰 {final_price:,.0f} تومان | 💳 کارت به کارت{disc_info}",
             )
             await message.bot.send_photo(
@@ -445,6 +445,6 @@ async def process_card_invalid(message: Message):
 
 @router.callback_query(F.data == "cancel_pay")
 async def cb_cancel_pay(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(TEXTS["buy_cancelled"], reply_markup=back_to_menu_kb())
+    await callback.message.edit_text(await t("buy_cancelled"), reply_markup=back_to_menu_kb())
     await callback.answer()
     await state.clear()

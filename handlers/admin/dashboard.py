@@ -8,15 +8,19 @@ from database.models import User, Order, Payment, Ticket, TicketStatus
 from keyboards.inline import admin_menu_kb
 from locales.fa import TEXTS
 from config import get_admin_ids, is_admin
+from utils.texts import esc
+from aiogram.fsm.context import FSMContext
 
 router = Router()
 
 
 @router.callback_query(F.data == "admin_menu")
-async def cb_admin_menu(callback: CallbackQuery):
+async def cb_admin_menu(callback: CallbackQuery, state: FSMContext):
     if not await is_admin(callback.from_user.id):
         await callback.answer("⛔ دسترسی غیرمجاز", show_alert=True)
         return
+
+    await state.clear()
 
     async with async_session() as session:
         users_count = (await session.execute(select(func.count(User.id)))).scalar() or 0

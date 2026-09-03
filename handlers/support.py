@@ -6,7 +6,7 @@ from sqlalchemy import select
 from database.engine import async_session
 from database.models import User, Ticket, TicketMessage, TicketStatus
 from keyboards.inline import back_to_menu_kb, admin_support_reply_kb
-from locales.fa import TEXTS
+from utils.texts import t, esc
 from states.states import SupportState
 from config import get_admin_ids
 
@@ -34,7 +34,7 @@ async def cb_support(callback: CallbackQuery, state: FSMContext):
             await session.refresh(ticket)
 
     await callback.message.edit_text(
-        TEXTS["support_ticket_open"].format(ticket_id=ticket.id),
+        (await t("support_ticket_open")).format(ticket_id=ticket.id),
         reply_markup=back_to_menu_kb(),
     )
     await callback.answer()
@@ -57,7 +57,7 @@ async def process_support_message(message: Message, state: FSMContext):
         await session.commit()
 
     await message.answer(
-        TEXTS["support_ticket_open"].format(ticket_id=ticket_id),
+        (await t("support_ticket_open")).format(ticket_id=ticket_id),
         reply_markup=back_to_menu_kb(),
     )
     await state.clear()
@@ -68,12 +68,12 @@ async def process_support_message(message: Message, state: FSMContext):
         try:
             await message.bot.send_message(
                 admin_id,
-                TEXTS["support_admin_notify"].format(
+                (await t("support_admin_notify")).format(
                     ticket_id=ticket_id,
-                    user_name=message.from_user.first_name,
-                    username=message.from_user.username or "ندارد",
+                    user_name=esc(message.from_user.first_name),
+                    username=esc(message.from_user.username or "ندارد"),
                     user_id=message.from_user.id,
-                    message=message.text or "(تصویر/رسانه)",
+                    message=esc(message.text or "(تصویر/رسانه)"),
                 ),
                 reply_markup=admin_support_reply_kb(ticket_id),
             )
@@ -131,7 +131,7 @@ async def process_admin_reply(message: Message, state: FSMContext):
         try:
             await message.bot.send_message(
                 ticket.user_id,
-                f"💬 پاسخ جدید به تیکت #{ticket_id}:\n\n{message.text}",
+                f"💬 پاسخ جدید به تیکت #{ticket_id}:\n\n{esc(message.text)}",
                 reply_markup=back_to_menu_kb(),
             )
         except Exception:
@@ -174,7 +174,7 @@ async def cb_admin_close_ticket(callback: CallbackQuery):
 @router.callback_query(F.data == "tutorial")
 async def cb_tutorial(callback: CallbackQuery):
     await callback.message.edit_text(
-        TEXTS["tutorial_title"],
+        await t("tutorial_title"),
         reply_markup=back_to_menu_kb(),
     )
     await callback.answer()
