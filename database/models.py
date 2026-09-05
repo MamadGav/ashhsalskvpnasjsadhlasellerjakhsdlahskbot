@@ -38,7 +38,8 @@ class TicketStatus(str, enum.Enum):
 class BotSettings(Base):
     __tablename__ = "bot_settings"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
-    value: Mapped[str] = mapped_column(String(256))
+    # Text (نه String): متن‌های سفارشی ادمین + ایموجی پرمیوم می‌توانند بسیار بلند باشند
+    value: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 

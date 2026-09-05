@@ -15,7 +15,10 @@ from keyboards.inline import (
 from locales.fa import TEXTS
 from states.states import AdminEditText
 from config import is_admin
-from utils.texts import EDITABLE_TEXTS, set_custom_text
+from utils.texts import (
+    EDITABLE_TEXTS, TEXT_VARIABLES, set_custom_text,
+    visible_len, MAX_VISIBLE_LEN, split_html_message,
+)
 
 router = Router()
 
@@ -50,12 +53,21 @@ async def cb_edit_text(callback: CallbackQuery, state: FSMContext):
 
     text_key, label = info
 
+    # راهنمای متغیرهای این متن
+    variables = TEXT_VARIABLES.get(db_key, ())
+    if variables:
+        vars_help = " | ".join(f"{{{v}}}" for v in variables)
+        vars_block = f"\n\n🧩 متغیرهای این متن (حذفشان نکنید):\n<code>{vars_help}</code>"
+    else:
+        vars_block = "\n\n🧩 این متن متغیری ندارد — کاملاً آزاد است."
+
     await state.update_data(text_db_key=db_key, text_key=text_key)
     await callback.message.edit_text(
         f"✏️ ویرایش: {label}\n━━━━━━━━━━━━━━━━━━━━━\n\n"
         "📝 متن جدید را بفرستید.\n"
-        "💡 می‌توانید از ایموجی پرمیوم، بولد، ایتالیک و ... استفاده کنید.\n\n"
-        "⚠️ متغیرهای موجود در متن (مثل {name} و {order_id}) را حذف نکنید!\n\n"
+        "💡 می‌توانید از ایموجی پرمیوم، بولد، ایتالیک و ... استفاده کنید."
+        f"{vars_block}\n\n"
+        f"📏 حداکثر طول متن: ~{MAX_VISIBLE_LEN} کاراکتر.\n\n"
         "♻️ برای بازگشت به متن پیش‌فرض، فقط «reset» بفرستید.",
         reply_markup=back_to_admin_kb(),
     )
@@ -87,18 +99,24 @@ async def process_edit_text(message: Message, state: FSMContext):
     # تبدیل entities پیام ادمین به HTML (شامل tg-emoji پرمیوم)
     html_text = html_decoration.unparse(message.text or "", message.entities or [])
 
-    # متغیرهای قالب باقی‌مانده را چک کن
+    # اعتبارسنجی طول مرئی (تلگرام تگ‌ها را نمی‌شمارد؛ هر ایموجی پرمیوم = ۲ واحد)
+    vlen = visible_len(html_text)
+    if vlen > MAX_VISIBLE_LEN:
+        await message.answer(
+            f"❌ متن خیلی بلند است! ({vlen} کاراکتر)\n"
+            f"📏 حداکثر مجاز: {MAX_VISIBLE_LEN} کاراکتر.\n\n"
+            "💡 متن را کوتاه‌تر کنید یا به چند بخش تقسیمش کنید.",
+        )
+        return  # state حفظ می‌شود تا ادمین دوباره بفرستد
+
     preview = html_text
 
     await set_custom_text(db_key, html_text)
 
-    await message.answer(
-        f"✅ متن «{label}» ذخیره شد!\n\n"
-        "━━━ پیش‌نمایش ━━━\n"
-        f"{preview}",
-        reply_markup=admin_text_confirm_kb(),
-        parse_mode="HTML",
-    )
+    # پیش‌نمایش: اگر بلند بود به چند پیام تقسیم می‌شود
+    for i, chunk in enumerate(split_html_message(f"✅ متن «{label}» ذخیره شد!\n\n━━━ پیش‌نمایش ━━━\n{preview}")):
+        kb = admin_text_confirm_kb() if i == 0 else None
+        await message.answer(chunk, reply_markup=kb, parse_mode="HTML")
     await state.clear()
 
 

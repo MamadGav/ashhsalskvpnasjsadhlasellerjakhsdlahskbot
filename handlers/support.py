@@ -6,7 +6,7 @@ from sqlalchemy import select
 from database.engine import async_session
 from database.models import User, Ticket, TicketMessage, TicketStatus
 from keyboards.inline import back_to_menu_kb, admin_support_reply_kb
-from utils.texts import t, esc
+from utils.texts import t, t_split, esc
 from states.states import SupportState
 from config import get_admin_ids
 
@@ -173,8 +173,15 @@ async def cb_admin_close_ticket(callback: CallbackQuery):
 
 @router.callback_query(F.data == "tutorial")
 async def cb_tutorial(callback: CallbackQuery):
+    chunks = await t_split("tutorial_title")
+    # قطعه اول ویرایش می‌شود، بقیه پیام جدید هستند
     await callback.message.edit_text(
-        await t("tutorial_title"),
-        reply_markup=back_to_menu_kb(),
+        chunks[0],
+        reply_markup=back_to_menu_kb() if len(chunks) == 1 else None,
     )
+    for extra in chunks[1:]:
+        await callback.message.answer(
+            extra,
+            reply_markup=back_to_menu_kb(),
+        )
     await callback.answer()

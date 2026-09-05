@@ -40,6 +40,136 @@ EDITABLE_TEXTS: dict[str, tuple[str, str]] = {
 _cache: dict[str, str] = {}
 _loaded = False
 
+# متغیرهای قابل استفاده در هر متن — به ادمین در ویرایشگر نمایش داده می‌شود
+TEXT_VARIABLES: dict[str, tuple[str, ...]] = {
+    "text_welcome": ("name", "gem", "lock", "bolt"),
+    "text_welcome_referral": ("name", "referrer", "bonus"),
+    "text_my_services": (),
+    "text_my_services_empty": (),
+    "text_service_item": ("order_id", "product_name", "expires", "status"),
+    "text_service_config": ("config",),
+    "text_wallet_title": ("balance",),
+    "text_buy_success": ("order_id",),
+    "text_test_used": (),
+    "text_test_success": (),
+    "text_referral_title": ("bonus", "link", "count", "total_bonus"),
+    "text_tutorial_title": (),
+    "text_support_ticket_open": ("ticket_id",),
+    "text_insufficient_balance": ("balance", "price"),
+    "text_banned": (),
+    "text_card_transfer_approved": ("amount",),
+}
+
+# تلگرام حداکثر ۴۰۹۶ کاراکتر «مرئی» می‌پذیرد؛ ۹۶ کاراکتر حاشیه امن می‌گذاریم
+MAX_VISIBLE_LEN = 4000
+
+import re as _re
+
+_TAG_RE = _re.compile(r"(<[^>]+>)")  # گروه capture: split تگ‌ها را هم برمی‌گرداند
+
+
+def visible_len(html_text: str) -> int:
+    """
+    طول مرئی متن HTML به روش تلگرام: تگ‌ها حذف می‌شوند و
+    طول متن باقی‌مانده بر حسب واحد UTF-16 شمرده می‌شود (هر ایموجی = ۲).
+    """
+    plain = _TAG_RE.sub("", html_text or "")
+    return len(plain.encode("utf-16-le")) // 2
+
+
+def split_html_message(html_text: str, limit: int = MAX_VISIBLE_LEN) -> list[str]:
+    """
+    متن HTML بلند را به چند قطعه ≤ limit تقسیم می‌کند.
+    تگ‌ها هرگز وسطشان بریده نمی‌شوند (طول مرئی صفر دارند) و تگ‌های
+    باز در ابتدای هر قطعه دوباره باز می‌شوند تا HTML معتبر بماند.
+    """
+    if visible_len(html_text) <= limit:
+        return [html_text]
+
+    def _open_tags_html(tags: list[str]) -> str:
+        return "".join(f"<{t}>" for t in tags)
+
+    chunks: list[str] = []
+    current = ""          # متن مرئیِ انباشته‌ی قطعه فعلی
+    open_tags: list[str] = []
+
+    def _close_open() -> str:
+        return "".join(f"</{t}>" for t in reversed(open_tags))
+
+    def _flush():
+        nonlocal current
+        if not current:
+            return
+        chunks.append(current + _close_open())
+        current = ""
+
+    for tok in _TAG_RE.split(html_text):
+        if not tok:
+            continue
+
+        if _TAG_RE.fullmatch(tok):
+            # ── تگ ── طول مرئی صفر؛ همیشه جا می‌شود
+            if tok.startswith("</"):
+                name = tok[2:-1].strip()
+                if name in open_tags:
+                    while open_tags and open_tags.pop() != name:
+                        pass
+                current += tok
+            elif tok.endswith("/>"):
+                current += tok
+            else:
+                name = tok[1:-1].split()[0]
+                open_tags.append(name)
+                current += tok
+            continue
+
+        # ── متن ── ممکن است سرریز کند
+        cur_len = visible_len(current)
+        tok_len = visible_len(tok)
+        room = limit - cur_len
+
+        if tok_len <= room:
+            current += tok
+            continue
+
+        # تقسیم متن روی مرز UTF-16
+        pos = 0
+        acc = 0
+        for ch in tok:
+            ch_len = 2 if ord(ch) > 0xFFFF else 1
+            if acc + ch_len > room:
+                break
+            acc += ch_len
+            pos += 1
+
+        current += tok[:pos]
+        _flush()
+        rest = tok[pos:]
+        # در قطعه‌ی جدید تگ‌های باز دوباره باز می‌شوند؛ room تازه
+        while rest:
+            prefix = _open_tags_html(open_tags)
+            room2 = limit - visible_len(prefix)
+            pos2 = 0
+            acc2 = 0
+            for ch in rest:
+                ch_len = 2 if ord(ch) > 0xFFFF else 1
+                if acc2 + ch_len > room2:
+                    break
+                acc2 += ch_len
+                pos2 += 1
+            current = prefix + rest[:pos2]
+            rest = rest[pos2:]
+            if rest:
+                _flush()
+                if pos2 == 0:
+                    # ایموجی تنها از limit بلندتر است — ناچار برش وسطش
+                    current = rest[: limit // 2]
+                    rest = rest[limit // 2:]
+                    _flush()
+
+    _flush()
+    return chunks
+
 
 async def _load_cache():
     global _loaded
@@ -102,3 +232,13 @@ async def t(key: str, **kwargs) -> str:
                     return TEXTS.get(key, key)
             return template
     return template
+
+
+async def t_split(key: str, **kwargs) -> list[str]:
+    """
+    مثل t() ولی متن نهایی را به چند قطعه ≤ ۴۰۰۰ کاراکتر تقسیم می‌کند.
+    برای متن‌هایی که می‌توانند بلند شوند (آموزش، سرویس‌های من و ...).
+    هندلر باید هر قطعه را جداگانه بفرستد.
+    """
+    body = await t(key, **kwargs)
+    return split_html_message(body)

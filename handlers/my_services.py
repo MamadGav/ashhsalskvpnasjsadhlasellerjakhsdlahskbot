@@ -5,7 +5,7 @@ from sqlalchemy import select
 from database.engine import async_session
 from database.models import User, Order, OrderStatus, Product
 from keyboards.inline import back_to_menu_kb
-from utils.texts import t, esc
+from utils.texts import t, esc, split_html_message
 
 router = Router()
 
@@ -56,9 +56,17 @@ async def cb_my_services(callback: CallbackQuery):
         if order.config_link:
             lines.append((await t("service_config")).format(config=esc(order.config_link)))
 
+    # اگر مجموعه سفارش‌ها بلند شد، به چند پیام تقسیم می‌شود
+    chunks = split_html_message("\n".join(lines))
     await callback.message.edit_text(
-        "\n".join(lines),
-        reply_markup=back_to_menu_kb(),
+        chunks[0],
+        reply_markup=back_to_menu_kb() if len(chunks) == 1 else None,
         parse_mode="HTML",
     )
+    for extra in chunks[1:]:
+        await callback.message.answer(
+            extra,
+            reply_markup=back_to_menu_kb(),
+            parse_mode="HTML",
+        )
     await callback.answer()

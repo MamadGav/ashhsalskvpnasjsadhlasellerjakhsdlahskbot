@@ -22,10 +22,18 @@ async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 
 async def init_db():
-    """ساخت جداول دیتابیس در صورت عدم وجود"""
+    """ساخت جداول دیتابیس در صورت عدم وجود + مایگریشن خودکار ستون‌های قدیمی"""
     async with engine.begin() as conn:
         from database.models import Base
         await conn.run_sync(Base.metadata.create_all)
+
+        # مایگریشن: ستون value جدول bot_settings از varchar(256) به TEXT
+        # (create_all جدول موجود را تغییر نمی‌دهد — این کوئری idempotent است)
+        from sqlalchemy import text as sql_text
+        try:
+            await conn.execute(sql_text("ALTER TABLE bot_settings ALTER COLUMN value TYPE TEXT"))
+        except Exception:
+            pass  # SQLite از این سینتکس پشتیبانی نمی‌کند و نیازی هم ندارد (Text همان TEXT است)
 
 
 async def get_session() -> AsyncSession:
